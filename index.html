@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日常害虫リスクMAP（プロトタイプ）</title>
+    <!-- 無料で使える地図ライブラリ Leaflet の読み込み -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: sans-serif; }
+        #map { width: 100vw; height: 100vh; }
+        .control-panel {
+            position: absolute; bottom: 20px; left: 50%;
+            transform: translateX(-50%); z-index: 1000;
+            background: white; padding: 15px; border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: flex; gap: 10px;
+        }
+        button {
+            padding: 10px 15px; font-weight: bold; border: none;
+            border-radius: 6px; cursor: pointer; color: white;
+        }
+        .btn-tick { background-color: #e63946; }
+        .btn-mos { background-color: #457b9d; }
+    </style>
+</head>
+<body>
+
+    <!-- 地図を表示するエリア -->
+    <div id="map"></div>
+
+    <!-- ユーザーが1タップで投稿するためのパネル -->
+    <div class="control-panel">
+        <button class="btn-tick" onclick="reportInsect('マダニ')">📍 マダニ目撃</button>
+        <button class="btn-mos" onclick="reportInsect('蚊')">📍 蚊の大量発生</button>
+    </div>
+
+    <script>
+        // 1. 地図の初期化（初期位置：東京駅周辺）
+        const map = L.map('map').setView([35.6812, 139.7671], 15);
+
+        // 2. 無料の地図タイル（OpenStreetMap）をセット
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // スマホのGPSから現在地を取得して地図を移動
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(position => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                map.setView([lat, lng], 16);
+                // 現在地マーク
+                L.circle([lat, lng], { radius: 10, color: '#1d3557' }).addTo(map).bindPopup("あなたの現在地");
+            });
+        }
+
+        // 3. 投稿機能（本来はバックエンドのデータベースに保存しますが、ここでは画面上にピンを立てます）
+        function reportInsect(type) {
+            // 地図の中心（または現在地）にピンを立てる
+            const center = map.getCenter();
+            
+            // 害虫の種類によってピンの色やメッセージを変える
+            const color = (type === 'マダニ') ? '#e63946' : '#457b9d';
+            
+            const marker = L.circleMarker(center, {
+                radius: 12,
+                fillColor: color,
+                color: "#fff",
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).addTo(map);
+
+            const now = new Date().toLocaleTimeString();
+            marker.bindPopup(`<b>【🚨${type}報告】</b><br>投稿時間: ${now}<br><small>※30日後に自動消去されます</small>`).openPopup();
+
+            alert(`現在地に「${type}」のリスクを報告しました！ご協力ありがとうございます。`);
+        }
+    </script>
+</body>
+</html>
