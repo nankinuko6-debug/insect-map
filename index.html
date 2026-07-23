@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>日常害虫リスクMAP（プロトタイプ）</title>
-    <!-- 無料で使える地図ライブラリ Leaflet の読み込み -->
+    <title>日常害虫リスクMAP</title>
+    <!-- 無料で使える地図ライブラリ Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -13,69 +13,125 @@
         .control-panel {
             position: absolute; bottom: 20px; left: 50%;
             transform: translateX(-50%); z-index: 1000;
-            background: white; padding: 15px; border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: flex; gap: 10px;
+            background: rgba(255, 255, 255, 0.95); padding: 12px 18px; border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; gap: 10px;
+            backdrop-filter: blur(5px);
         }
         button {
-            padding: 10px 15px; font-weight: bold; border: none;
-            border-radius: 6px; cursor: pointer; color: white;
+            padding: 10px 16px; font-weight: bold; border: none;
+            border-radius: 20px; cursor: pointer; color: white; font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: transform 0.1s;
         }
+        button:active { transform: scale(0.95); }
         .btn-tick { background-color: #e63946; }
         .btn-mos { background-color: #457b9d; }
+        
+        /* ポップアップ内の削除ボタン用スタイル */
+        .delete-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            margin-top: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .delete-btn:hover {
+            background-color: #e63946;
+        }
     </style>
 </head>
 <body>
 
-    <!-- 地図を表示するエリア -->
+    <!-- 地図エリア -->
     <div id="map"></div>
 
-    <!-- ユーザーが1タップで投稿するためのパネル -->
+    <!-- 投稿用ボタン -->
     <div class="control-panel">
         <button class="btn-tick" onclick="reportInsect('マダニ')">📍 マダニ目撃</button>
         <button class="btn-mos" onclick="reportInsect('蚊')">📍 蚊の大量発生</button>
     </div>
 
     <script>
-        // 1. 地図の初期化（初期位置：東京駅周辺）
+        // 1. 地図の初期化
         const map = L.map('map').setView([35.6812, 139.7671], 15);
 
-        // 2. 無料の地図タイル（OpenStreetMap）をセット
+        // 2. 無料の地図タイル（OpenStreetMap）
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // スマホのGPSから現在地を取得して地図を移動
+        // GPSで現在地を取得
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(position => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
                 map.setView([lat, lng], 16);
-                // 現在地マーク
-                L.circle([lat, lng], { radius: 10, color: '#1d3557' }).addTo(map).bindPopup("あなたの現在地");
+                
+                L.circle([lat, lng], { 
+                    radius: 12, 
+                    fillColor: '#2a9d8f', 
+                    color: '#fff', 
+                    weight: 2, 
+                    fillOpacity: 0.8 
+                }).addTo(map).bindPopup("<b>📍 あなたの現在地</b>");
             });
         }
 
-        // 3. 投稿機能（本来はバックエンドのデータベースに保存しますが、ここでは画面上にピンを立てます）
+        // ユニークIDを生成する関数（削除管理用）
+        function generateId() {
+            return '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // 3. 投稿機能（削除ボタン付き）
         function reportInsect(type) {
-            // 地図の中心（または現在地）にピンを立てる
             const center = map.getCenter();
-            
-            // 害虫の種類によってピンの色やメッセージを変える
             const color = (type === 'マダニ') ? '#e63946' : '#457b9d';
-            
+            const id = generateId(); // このピン専用のIDを作成
+
+            // ピンの追加
             const marker = L.circleMarker(center, {
-                radius: 12,
+                radius: 14,
                 fillColor: color,
                 color: "#fff",
                 weight: 2,
                 opacity: 1,
-                fillOpacity: 0.8
+                fillOpacity: 0.85
             }).addTo(map);
 
-            const now = new Date().toLocaleTimeString();
-            marker.bindPopup(`<b>【🚨${type}報告】</b><br>投稿時間: ${now}<br><small>※30日後に自動消去されます</small>`).openPopup();
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            alert(`現在地に「${type}」のリスクを報告しました！ご協力ありがとうございます。`);
+            // ポップアップの内容（削除ボタンを埋め込み）
+            const popupContent = `
+                <div style="text-align: center;">
+                    <b style="color: ${color};">【🚨${type}報告】</b><br>
+                    <small>投稿時間: ${now}</small><br>
+                    <button class="delete-btn" onclick="removeMarker('${id}')">🗑️ 誤投稿を消去する</button>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent).openPopup();
+
+            // グローバル変数にマーカーを保持（削除できるように）
+            window[id] = marker;
+
+            // アラート表示
+            alert(`「${type}」を報告しました。\nもし誤って登録した場合は、作成されたピンをタップして「消去」できます。`);
+        }
+
+        // 4. ピンを削除する関数
+        function removeMarker(id) {
+            if (confirm("この投稿を削除（消去）しますか？")) {
+                const marker = window[id];
+                if (marker) {
+                    map.removeLayer(marker); // 地図から消去
+                    delete window[id]; // メモリから消去
+                    alert("投稿を消去しました。");
+                }
+            }
         }
     </script>
 </body>
