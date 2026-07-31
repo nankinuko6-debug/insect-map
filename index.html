@@ -24,7 +24,6 @@
         }
         button:active { transform: scale(0.95); }
         .btn-tick { background-color: #e63946; }
-        .btn-mos { background-color: #457b9d; }
         
         /* ポップアップ内の削除ボタン用スタイル */
         .delete-btn {
@@ -57,7 +56,6 @@
     <!-- 投稿用ボタン -->
     <div class="control-panel">
         <button class="btn-tick" onclick="reportInsect('マダニ')">📍 マダニ目撃</button>
-        <button class="btn-mos" onclick="reportInsect('蚊')">📍 蚊の大量発生</button>
     </div>
 
     <script>
@@ -94,7 +92,7 @@
         // 3. 投稿機能（削除ボタン付き）
         function reportInsect(type) {
             const center = map.getCenter();
-            const color = (type === 'マダニ') ? '#e63946' : '#457b9d';
+            const color = '#e63946';
             const id = generateId(); // このピン専用のIDを作成
 
             // ピンの追加
